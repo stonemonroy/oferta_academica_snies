@@ -155,7 +155,7 @@ texto_oferta_modalidades_html <- function(variable){
         labels = function(x) paste0(x, "%")
       ) +  
       geom_text_repel(aes(label= n), size=3, show.legend = FALSE)+
-      theme_minimal() %>% 
+      theme_minimal() +
       theme(legend.position = "top")  # This moves the legend to the top
     
   })
@@ -210,7 +210,7 @@ texto_oferta_modalidades_html <- function(variable){
         breaks = seq(0, 20, by = 5),  # Add breaks every 2 units
         labels = function(x) paste0(x, "%")
       ) +  
-      theme_minimal() %>% 
+      theme_minimal() +
       theme(legend.position = "top")  # This moves the legend to the top
       
   })
@@ -231,16 +231,18 @@ texto_oferta_modalidades_html <- function(variable){
       filter(NIVEL_ACADEMICO == input$select_nivel_academico) %>%
       filter(MODALIDAD == "PRESENCIAL") %>% 
       mutate(CATEGORIA = paste("Presencial - ", CATEGORIA)) %>% 
-      ggplot(aes(x=ANO,y=n,color=CATEGORIA))+
+      group_by(ANO, CATEGORIA) %>%
+      summarise(total = sum(n, na.rm = TRUE)) %>% 
+      ggplot(aes(x=ANO,y=total,color=CATEGORIA))+
       geom_line()+
-      geom_text_repel(aes(label= n), size=3, nudge_y = 2, show.legend = FALSE)+
+      geom_text_repel(aes(label= total), size=3, nudge_y = 2, show.legend = FALSE)+
       geom_point()+
       labs(
         x = "Año",   # Cambiar el nombre del eje X
         y = "Número de programas",  # Cambiar el nombre del eje Y
         color = NULL
       ) +
-      theme_minimal() %>% 
+      theme_minimal() +
       theme(legend.position = "top")  # This moves the legend to the top
 
   })
@@ -253,7 +255,7 @@ texto_oferta_modalidades_html <- function(variable){
       filter(NIVEL_ACADEMICO == input$select_nivel_academico) %>%
       filter(MODALIDAD == "OTRAS MODALIDADES") %>%
       mutate(CATEGORIA = paste("Otras modalidades - ", CATEGORIA)) %>% 
-      group_by(ANO, CATEGORIA) %>% 
+      group_by(ANO, CATEGORIA) %>%
       summarise(total = sum(n, na.rm = TRUE)) %>% 
       ggplot(aes(x=ANO,y=total,color=CATEGORIA))+
       geom_line()+
@@ -264,7 +266,7 @@ texto_oferta_modalidades_html <- function(variable){
         y = "Número de programas",  # Cambiar el nombre del eje Y
         color = NULL
       ) +
-      theme_minimal() %>%
+      theme_minimal() +
       theme(legend.position = "top")  # This moves the legend to the top
     
   })
@@ -367,11 +369,12 @@ texto_oferta_modalidades_html <- function(variable){
                                   "A DISTANCIA (TRADICIONAL)", METODOLOGIA)) %>% 
       mutate(METODOLOGIA = ifelse(METODOLOGIA == "A DISTANCIA (VIRTUAL)", 
                                   "VIRTUAL", METODOLOGIA)) %>%
+      mutate(METODOLOGIA = ifelse(METODOLOGIA == "PRESENCIAL-VIRTUAL", 
+                                  "HIBRIDO", METODOLOGIA)) %>%
       mutate(n = ifelse(is.na(n), 0, n)) %>% 
-      mutate(across(where(is.numeric), ~replace_na(., 0))) %>% 
       filter(ANO == ifelse(as.numeric(input$select_anio_oferta) -4 < minimo, minimo, as.numeric(input$select_anio_oferta) -4)
                     | ANO ==  input$select_anio_oferta) %>% 
-      pivot_wider(names_from = c(ANO,CATEGORIA), values_from = n,names_sep = "-") 
+      pivot_wider(names_from = c(ANO,CATEGORIA), values_from = n,names_sep = "-", values_fill = 0) 
     
     Tabla <- Tabla %>% 
       flextable() %>% 

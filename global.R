@@ -36,7 +36,9 @@ Data_Primer_Curso <- Data_Primer_Curso %>%
   mutate(METODOLOGIA = ifelse(is.na(METODOLOGIA), MODALIDAD, METODOLOGIA)) %>%
   mutate(METODOLOGIA = toupper(METODOLOGIA)) %>% 
   mutate(METODOLOGIA = ifelse(METODOLOGIA == "VIRTUAL-A DISTANCIA", 
-                              "VIRTUAL", METODOLOGIA))
+                              "VIRTUAL", METODOLOGIA)) %>% 
+  mutate(METODOLOGIA = ifelse(METODOLOGIA == "DUAL", 
+                              "PRESENCIAL", METODOLOGIA))
 
 # Tabla de modalidades pregrado ---------------------------------------------
 MODALIDADES_TABLA <- Data_Primer_Curso %>% 
@@ -65,7 +67,7 @@ MODALIDADES_TABLA <- Data_Primer_Curso %>%
       summarise(UPN = n_distinct(CODIGO_SNIES_DEL_PROGRAMA)),
     by = c("ANO", "METODOLOGIA" , "NIVEL_ACADEMICO")
   ) %>%
-  mutate(MODALIDAD = ifelse(METODOLOGIA == "PRESENCIAL", "PRESENCIAL", "OTRAS MODALIDADES")) %>%
+  mutate(MODALIDAD = ifelse( METODOLOGIA == "DUAL" | METODOLOGIA == "PRESENCIAL", "PRESENCIAL", "OTRAS MODALIDADES")) %>%
   pivot_longer(cols = c("Nacional", "Bogotá", "UPN"),
                names_to = "CATEGORIA",
                values_to = "n")
