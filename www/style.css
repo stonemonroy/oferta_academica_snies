@@ -1,0 +1,23 @@
+.sidebar {
+  color: #FFF;
+  position: fixed;
+  width: 220px;
+  white-space: nowrap;
+  overflow: visible;
+}
+
+.main-header {
+  position: fixed;
+  width:100%;
+}
+
+.contenido {
+  margin-top: 14%;
+}
+
+.filtros {
+  position: fixed;
+  margin-top: 3%;
+  z-index: 9999;
+  width: 100%;
+}

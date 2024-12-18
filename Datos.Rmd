@@ -1,0 +1,534 @@
+---
+title: "SNIES PROGRAMAS"
+output: html_document
+date: "2024-12-12"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, error = FALSE)
+
+# Carga de librerías ------------------------------------------------------
+
+library(plotly)
+library(shiny)
+library(shinyWidgets)
+library(shinydashboard)
+library(openxlsx)
+library(janitor)
+library(scales)
+library(summaryBox)
+library(shinycssloaders)
+library(lubridate)
+library(ggthemes)
+library(leaflet)
+library(viridis)
+library(DT)
+library(tidyverse)
+library(ggrepel)
+library(stringi)
+library(sf)
+
+library(openxlsx)
+library(tidyverse)
+library(janitor)
+library(flextable)
+library(scales)
+library(lubridate)
+library(forcats)
+library(arrow)
+```
+
+```{r include=FALSE}
+ftable <- function(x, encabezado = NULL, title = NULL) {
+  
+  table <- x %>% 
+    flextable() %>% 
+    set_caption(caption = title) %>%
+    merge_at(i = 1, j = 1, part = "header") %>% 
+    align(part = "header", align = "center") %>% 
+    align(j = 2:ncol_keys(.), align = "center") %>% 
+    bg(part = "header", bg = "#2c7fb8") %>% 
+    color(part = "header", color = "white") %>% 
+    bg(j = 1, bg = "#D9D9D9") %>% 
+    border(part = "all", border = fp_border_default(color="black", width = 1)) %>% 
+    autofit() %>%
+    fit_to_width(max_width = 8.5)
+  
+  if (!is.null(encabezado)) {
+    table <- table %>% 
+      add_header_row(colwidths = ncol_keys(.), values = encabezado)
+  }
+  
+  return(table)
+    
+}
+
+```
+
+
+```{r include=FALSE}
+# Lectura de datos ---------------------------------------------------------
+# load("www/Colombia_M.RData")
+Data_Primer_Curso <- read.xlsx("Data_Primiparos_GRAFICOS - PROGRAMAS.xlsx", sheet = "Sheet 1")
+
+fecha = year(Sys.Date())
+
+Data_Primer_Curso <- Data_Primer_Curso %>% 
+  mutate(METODOLOGIA = ifelse(is.na(METODOLOGIA), MODALIDAD, METODOLOGIA)) %>%
+  mutate(METODOLOGIA = toupper(METODOLOGIA)) %>% 
+  mutate(METODOLOGIA = ifelse(METODOLOGIA == "VIRTUAL-A DISTANCIA", 
+                              "VIRTUAL", METODOLOGIA))
+
+```
+
+# Número de programas - Participación de la UPN
+## Pregrado
+
+```{r echo=FALSE}
+# Grafico pregrado
+Data_Primer_Curso %>% 
+  filter(ANO >= fecha - 5) %>%
+  filter(NIVEL_ACADEMICO == "PREGRADO") %>%
+  filter(INSTITUCION_DE_EDUCACION_SUPERIOR_IES == "UNIVERSIDAD PEDAGOGICA NACIONAL") %>% 
+  group_by(ANO) %>% 
+  summarise(UPN = n_distinct(CODIGO_SNIES_DEL_PROGRAMA)) %>% 
+  left_join(
+    Data_Primer_Curso %>% 
+    filter(DESC_CINE_CAMPO_AMPLIO == "EDUCACIÓN" | DESC_CINE_CAMPO_AMPLIO == "Educación") %>%
+    filter(ANO >= fecha - 5) %>%
+    filter(NIVEL_ACADEMICO == "PREGRADO") %>%
+    group_by(ANO) %>% 
+    summarise(NACIONAL = n_distinct(CODIGO_SNIES_DEL_PROGRAMA)),
+    by = "ANO"
+  ) %>% 
+  left_join(
+    Data_Primer_Curso %>% 
+    filter(DESC_CINE_CAMPO_AMPLIO == "EDUCACIÓN" | DESC_CINE_CAMPO_AMPLIO == "Educación") %>%
+    filter(ANO >= fecha - 5) %>%
+    filter(NIVEL_ACADEMICO == "PREGRADO") %>%
+    filter(MUNICIPIO_DE_OFERTA_DEL_PROGRAMA == "BOGOTA, D.C.") %>% 
+    group_by(ANO) %>% 
+    summarise(BOGOTA = n_distinct(CODIGO_SNIES_DEL_PROGRAMA)),
+    by = "ANO"
+  ) %>% 
+  mutate(
+    "UPN - Nacional pregrado" = round((UPN / NACIONAL) * 100,2),
+    "UPN - Bogotá pregrado" = round((UPN / BOGOTA) * 100,2)
+  ) %>% 
+  pivot_longer(cols = c("UPN - Nacional pregrado", "UPN - Bogotá pregrado"),
+               names_to = "Categoria",
+               values_to = "n") %>% 
+  
+  ggplot(aes(x=ANO,y=n,color=Categoria))+
+  geom_line()+
+  geom_point()+
+  labs(
+    x = "Año",   # Cambiar el nombre del eje X
+    y = "Número de programas",  # Cambiar el nombre del eje Y
+    color = NULL
+  ) +
+  scale_y_continuous(
+    limits = c(0, 25),  # Set a fixed range from 0 to 20
+    breaks = seq(0, 20, by = 5),  # Add breaks every 2 units
+    labels = function(x) paste0(x, "%")
+  ) +  
+  geom_text_repel(aes(label= n), size=3, show.legend = FALSE)+
+  theme_minimal() %>% 
+  theme(legend.position = "top")  # This moves the legend to the top
+  
+```
+
+## Posgrado
+```{r echo=FALSE}
+
+Data_Primer_Curso %>% 
+  filter(ANO >= fecha - 5) %>%
+  filter(NIVEL_ACADEMICO == "POSGRADO") %>%
+  filter(INSTITUCION_DE_EDUCACION_SUPERIOR_IES == "UNIVERSIDAD PEDAGOGICA NACIONAL") %>% 
+  group_by(ANO) %>% 
+  summarise(UPN = n_distinct(CODIGO_SNIES_DEL_PROGRAMA)) %>% 
+  left_join(
+    Data_Primer_Curso %>% 
+    filter(DESC_CINE_CAMPO_AMPLIO == "EDUCACIÓN" | DESC_CINE_CAMPO_AMPLIO == "Educación") %>%
+    filter(ANO >= fecha - 5) %>%
+    filter(NIVEL_ACADEMICO == "POSGRADO") %>%
+    group_by(ANO) %>% 
+    summarise(NACIONAL = n_distinct(CODIGO_SNIES_DEL_PROGRAMA)),
+    by = "ANO"
+  ) %>% 
+  left_join(
+    Data_Primer_Curso %>% 
+    filter(DESC_CINE_CAMPO_AMPLIO == "EDUCACIÓN" | DESC_CINE_CAMPO_AMPLIO == "Educación") %>%
+    # filter(ANO == "2020")
+    filter(ANO >= fecha - 5) %>%
+    filter(NIVEL_ACADEMICO == "POSGRADO") %>%
+    filter(MUNICIPIO_DE_OFERTA_DEL_PROGRAMA == "BOGOTA, D.C.") %>% 
+    group_by(ANO) %>% 
+    summarise(BOGOTA = n_distinct(CODIGO_SNIES_DEL_PROGRAMA)),
+    by = "ANO"
+  ) %>% 
+  mutate(
+    "UPN - Nacional posgrado" = round((UPN / NACIONAL) * 100,2),
+    "UPN - Bogotá posgrado" = round((UPN / BOGOTA) * 100,2)
+  ) %>% 
+  pivot_longer(cols = c("UPN - Nacional posgrado", "UPN - Bogotá posgrado"),
+               names_to = "Categoria",
+               values_to = "n") %>% 
+  
+  ggplot(aes(x=ANO,y=n,color=Categoria))+
+  geom_line()+
+  geom_text_repel(aes(label= n), size=3, show.legend = FALSE)+
+  geom_point()+
+  labs(
+    x = "Año",   # Cambiar el nombre del eje X
+    y = "Número de programas",  # Cambiar el nombre del eje Y
+    color = NULL
+  ) +
+  scale_y_continuous(
+    limits = c(0, 15),  # Set a fixed range from 0 to 20
+    breaks = seq(0, 20, by = 5),  # Add breaks every 2 units
+    labels = function(x) paste0(x, "%")
+  ) +  
+  theme_minimal() %>% 
+  theme(legend.position = "top")  # This moves the legend to the top
+
+```
+
+
+# Modalidad
+
+## Pregrado
+
+```{r echo=FALSE}
+MODALIDADES_TABLA <- Data_Primer_Curso %>% 
+  filter(ANO >= fecha - 5) %>%
+  complete(ANO, Categoria = unique(MODALIDADES_TABLA_PREGRADO$Categoria), fill = list(valor = 0)) %>%
+  filter(DESC_CINE_CAMPO_AMPLIO == "EDUCACIÓN" | DESC_CINE_CAMPO_AMPLIO == "Educación") %>%
+  # filter(NIVEL_ACADEMICO == "PREGRADO") %>%
+  group_by(ANO, METODOLOGIA, NIVEL_ACADEMICO) %>% 
+  summarise(Nacional = n_distinct(CODIGO_SNIES_DEL_PROGRAMA)) %>% 
+  left_join(
+    Data_Primer_Curso %>%
+    filter(DESC_CINE_CAMPO_AMPLIO == "EDUCACIÓN" | DESC_CINE_CAMPO_AMPLIO == "Educación") %>%
+    filter(ANO >= fecha - 5) %>%
+    # filter(NIVEL_ACADEMICO == "PREGRADO") %>%
+    filter(MUNICIPIO_DE_OFERTA_DEL_PROGRAMA == "BOGOTA, D.C.") %>% 
+    group_by(ANO, METODOLOGIA, NIVEL_ACADEMICO) %>%
+    summarise(Bogotá = n_distinct(CODIGO_SNIES_DEL_PROGRAMA)),
+    by = c("ANO", "METODOLOGIA", "NIVEL_ACADEMICO")
+  ) %>% 
+  left_join(
+    Data_Primer_Curso %>%
+    filter(DESC_CINE_CAMPO_AMPLIO == "EDUCACIÓN" | DESC_CINE_CAMPO_AMPLIO == "Educación") %>%
+    filter(ANO >= fecha - 5) %>%
+    # filter(NIVEL_ACADEMICO == "PREGRADO") %>%
+    filter(INSTITUCION_DE_EDUCACION_SUPERIOR_IES == "UNIVERSIDAD PEDAGOGICA NACIONAL") %>%
+    group_by(ANO, METODOLOGIA, NIVEL_ACADEMICO) %>%
+    summarise(UPN = n_distinct(CODIGO_SNIES_DEL_PROGRAMA)),
+    by = c("ANO", "METODOLOGIA" , "NIVEL_ACADEMICO")
+  ) %>%
+  mutate(MODALIDAD = ifelse(METODOLOGIA == "PRESENCIAL", "PRESENCIAL", "OTRAS MODALIDADES")) %>%
+  pivot_longer(cols = c("Nacional", "Bogotá", "UPN"),
+               names_to = "CATEGORIA",
+               values_to = "n")
+  # select(-METODOLOGIA) %>%
+```
+
+
+### Presencial
+
+```{r echo=FALSE}
+MODALIDADES_TABLA %>% 
+  filter(MODALIDAD == "PRESENCIAL") %>% 
+  mutate(CATEGORIA = paste("Presencial - ", CATEGORIA)) %>% 
+  ggplot(aes(x=ANO,y=n,color=CATEGORIA))+
+  geom_line()+
+  geom_text_repel(aes(label= n), size=3, nudge_y = 2, show.legend = FALSE)+
+  geom_point()+
+  labs(
+    x = "Año",   # Cambiar el nombre del eje X
+    y = "Número de programas",  # Cambiar el nombre del eje Y
+    color = NULL
+  ) +
+  theme_minimal() %>% 
+  theme(legend.position = "top")  # This moves the legend to the top
+  
+```
+
+### Otras modalidades
+
+```{r echo=FALSE}
+MODALIDADES_TABLA %>% 
+  filter(MODALIDAD == "OTRAS MODALIDADES") %>%
+  mutate(CATEGORIA = paste("Otras modalidades - ", CATEGORIA)) %>% 
+  group_by(ANO, CATEGORIA) %>% 
+  summarise(total = sum(n, na.rm = TRUE)) %>% 
+  ggplot(aes(x=ANO,y=total,color=CATEGORIA))+
+  geom_line()+
+  geom_text_repel(aes(label= total), size=3, nudge_y = 2, show.legend = FALSE)+
+  geom_point()+
+  labs(
+    x = "Año",   # Cambiar el nombre del eje X
+    y = "Número de programas",  # Cambiar el nombre del eje Y
+    color = NULL
+  ) +
+  theme_minimal() %>%
+  theme(legend.position = "top")  # This moves the legend to the top
+```
+
+### Modalidades Nacional vs UPN `r fecha-1`
+
+```{r echo=FALSE}
+MODALIDADES_TABLA %>% 
+  filter(ANO == fecha-1) %>% 
+  filter(CATEGORIA == "Nacional" | CATEGORIA == "UPN") %>% 
+  pivot_wider(names_from = CATEGORIA, values_from = n) %>% 
+  mutate("Participación - UPN" = ifelse(is.na(UPN), 0,round((UPN / Nacional) * 100,2))) %>% 
+  pivot_longer(cols = c("Nacional", "UPN"),
+               names_to = "CATEGORIA",
+               values_to = "n") %>% 
+  filter(CATEGORIA == "Nacional") %>% 
+  ggplot(aes(x = METODOLOGIA, y = n)) +
+  geom_bar(stat = "identity", alpha = 0.5, width = 0.5) +
+  geom_line(aes(y = `Participación - UPN`, group = CATEGORIA), color = "black", size = 0.7) +
+  geom_point(aes(y = `Participación - UPN`, group = CATEGORIA))+
+   geom_text_repel(
+    aes(
+      y =`Participación - UPN`, 
+      label = `Participación - UPN`, 
+      group = CATEGORIA
+    ), 
+    size = 3, 
+    box.padding = 0.5, 
+    min.segment.length = 0
+  ) +
+  
+  # Escala para las barras (porcentaje o valores absolutos)
+  scale_y_continuous(
+    name = "Número de programas",
+  )
+```
+
+### Modalidades Bogotá vs UPN `r fecha-1`
+
+```{r echo=FALSE}
+MODALIDADES_TABLA %>% 
+  filter(ANO == fecha-1) %>% 
+  filter(CATEGORIA == "Bogotá" | CATEGORIA == "UPN") %>% 
+  pivot_wider(names_from = CATEGORIA, values_from = n) %>% 
+  mutate("Participación - UPN" = ifelse(is.na(UPN), 0,round((UPN / `Bogotá`) * 100,2))) %>% 
+  pivot_longer(cols = c("Bogotá", "UPN"),
+               names_to = "CATEGORIA",
+               values_to = "n") %>% 
+  filter(CATEGORIA == "Bogotá") %>% 
+  ggplot(aes(x = METODOLOGIA, y = n)) +
+  geom_bar(stat = "identity", alpha = 0.5, width = 0.5) +
+  geom_line(aes(y = `Participación - UPN`, group = CATEGORIA), color = "black", size = 0.7) +
+  geom_point(aes(y = `Participación - UPN`, group = CATEGORIA))+
+   geom_text_repel(
+    aes(
+      y =`Participación - UPN`, 
+      label = `Participación - UPN`, 
+      group = CATEGORIA
+    ), 
+    size = 3, 
+    box.padding = 0.15, 
+    nudge_x = 0.15,
+    min.segment.length = 0
+  ) +
+  
+  # Escala para las barras (porcentaje o valores absolutos)
+  scale_y_continuous(
+    name = "Número de programas",
+  )
+```
+
+### Tabla modalidades
+
+```{r echo=FALSE}
+MODALIDADES_TABLA %>% 
+  select(-MODALIDAD) %>% 
+  mutate(METODOLOGIA = ifelse(METODOLOGIA == "A DISTANCIA", 
+                              "A DISTANCIA (TRADICIONAL)", METODOLOGIA)) %>% 
+  mutate(METODOLOGIA = ifelse(METODOLOGIA == "A DISTANCIA (VIRTUAL)", 
+                              "VIRTUAL", METODOLOGIA)) %>% 
+  mutate(across(where(is.numeric), ~replace_na(., 0))) %>% 
+  filter(ANO == fecha-5 | ANO==fecha-1) %>% 
+  pivot_wider(names_from = c(ANO,CATEGORIA), values_from = n,names_sep = "-") %>%
+  ftable() %>% 
+  separate_header(opts = "center-hspan",
+  split = "-",
+  fixed = FALSE) 
+
+  
+```
+
+
+
+## Posgrado
+
+```{r echo=FALSE}
+MODALIDADES_TABLA_POSGRADO <- Data_Primer_Curso %>% 
+  filter(ANO >= fecha - 5) %>%
+  filter(DESC_CINE_CAMPO_AMPLIO == "EDUCACIÓN" | DESC_CINE_CAMPO_AMPLIO == "Educación") %>%
+  filter(NIVEL_ACADEMICO == "POSGRADO") %>%
+  group_by(ANO, METODOLOGIA) %>% 
+  summarise(Nacional = n_distinct(CODIGO_SNIES_DEL_PROGRAMA)) %>% 
+  left_join(
+    Data_Primer_Curso %>%
+    filter(DESC_CINE_CAMPO_AMPLIO == "EDUCACIÓN" | DESC_CINE_CAMPO_AMPLIO == "Educación") %>%
+    filter(ANO >= fecha - 5) %>%
+    filter(NIVEL_ACADEMICO == "POSGRADO") %>%
+    filter(MUNICIPIO_DE_OFERTA_DEL_PROGRAMA == "BOGOTA, D.C.") %>% 
+    group_by(ANO, METODOLOGIA) %>%
+    summarise(Bogotá = n_distinct(CODIGO_SNIES_DEL_PROGRAMA)),
+    by = c("ANO", "METODOLOGIA")
+  ) %>% 
+  left_join(
+    Data_Primer_Curso %>%
+    filter(DESC_CINE_CAMPO_AMPLIO == "EDUCACIÓN" | DESC_CINE_CAMPO_AMPLIO == "Educación") %>%
+    filter(ANO >= fecha - 5) %>%
+    filter(NIVEL_ACADEMICO == "POSGRADO") %>%
+    filter(INSTITUCION_DE_EDUCACION_SUPERIOR_IES == "UNIVERSIDAD PEDAGOGICA NACIONAL") %>%
+    group_by(ANO, METODOLOGIA) %>%
+    summarise(UPN = n_distinct(CODIGO_SNIES_DEL_PROGRAMA)),
+    by = c("ANO", "METODOLOGIA")
+  ) %>%
+  mutate(MODALIDAD = ifelse(METODOLOGIA == "PRESENCIAL" 
+                            |METODOLOGIA == "DUAL", "PRESENCIAL", "OTRAS MODALIDADES")) %>%
+  pivot_longer(cols = c("Nacional", "Bogotá", "UPN"),
+               names_to = "CATEGORIA",
+                values_to = "n")
+```
+
+### Presencial
+
+```{r echo=FALSE}
+MODALIDADES_TABLA_POSGRADO %>% 
+  filter(MODALIDAD == "PRESENCIAL") %>% 
+  mutate(CATEGORIA = paste("Presencial - ", CATEGORIA)) %>% 
+  group_by(ANO, CATEGORIA) %>% 
+  summarise(total = sum(n, na.rm = TRUE)) %>% 
+  ggplot(aes(x=ANO,y=total,color=CATEGORIA))+
+  geom_line()+
+  geom_text_repel(aes(label= total), size=3, nudge_y = 2, show.legend = FALSE)+
+  geom_point()+
+  labs(
+    x = "Año",   # Cambiar el nombre del eje X
+    y = "Número de programas",  # Cambiar el nombre del eje Y
+    color = NULL
+  ) +
+  theme_minimal() %>% 
+  theme(legend.position = "top")  # This moves the legend to the top
+  
+```
+
+### Otras modalidades
+
+```{r echo=FALSE}
+MODALIDADES_TABLA_POSGRADO %>% 
+  filter(MODALIDAD == "OTRAS MODALIDADES") %>%
+  mutate(CATEGORIA = paste("Otras modalidades - ", CATEGORIA)) %>% 
+  group_by(ANO, CATEGORIA) %>% 
+  summarise(total = sum(n, na.rm = TRUE)) %>%
+  ggplot(aes(x=ANO,y=total,color=CATEGORIA))+
+  geom_line()+
+  geom_text_repel(aes(label= total), size=3, nudge_y = 2, show.legend = FALSE)+
+  geom_point()+
+  labs(
+    x = "Año",   # Cambiar el nombre del eje X
+    y = "Número de programas",  # Cambiar el nombre del eje Y
+    color = NULL
+  ) +
+  theme_minimal() %>%
+  theme(legend.position = "top")  # This moves the legend to the top
+```
+
+### Modalidades Nacional vs UPN `r fecha-1`
+
+```{r echo=FALSE}
+MODALIDADES_TABLA_POSGRADO %>% 
+  filter(ANO == fecha-1) %>% 
+  filter(CATEGORIA == "Nacional" | CATEGORIA == "UPN") %>% 
+  pivot_wider(names_from = CATEGORIA, values_from = n) %>% 
+  mutate("Participación - UPN" = ifelse(is.na(UPN), 0,round((UPN / Nacional) * 100,2))) %>% 
+  pivot_longer(cols = c("Nacional", "UPN"),
+               names_to = "CATEGORIA",
+               values_to = "n") %>% 
+  filter(CATEGORIA == "Nacional") %>% 
+  ggplot(aes(x = METODOLOGIA, y = n)) +
+  geom_bar(stat = "identity", alpha = 0.5, width = 0.5) +
+  geom_line(aes(y = `Participación - UPN`, group = CATEGORIA), color = "black", size = 0.7) +
+  geom_point(aes(y = `Participación - UPN`, group = CATEGORIA))+
+   geom_text_repel(
+    aes(
+      y =`Participación - UPN`, 
+      label = `Participación - UPN`, 
+      group = CATEGORIA
+    ), 
+    size = 3, 
+    box.padding = 0.5, 
+    min.segment.length = 0
+  ) +
+  
+  # Escala para las barras (porcentaje o valores absolutos)
+  scale_y_continuous(
+    name = "Número de programas",
+  )
+```
+
+### Modalidades Bogotá vs UPN `r fecha-1`
+
+```{r echo=FALSE}
+MODALIDADES_TABLA_POSGRADO %>% 
+  filter(ANO == fecha-1) %>% 
+  filter(CATEGORIA == "Bogotá" | CATEGORIA == "UPN") %>% 
+  pivot_wider(names_from = CATEGORIA, values_from = n) %>% 
+  mutate("Participación - UPN" = ifelse(is.na(UPN), 0,round((UPN / `Bogotá`) * 100,2))) %>% 
+  pivot_longer(cols = c("Bogotá", "UPN"),
+               names_to = "CATEGORIA",
+               values_to = "n") %>% 
+  filter(CATEGORIA == "Bogotá") %>% 
+  ggplot(aes(x = METODOLOGIA, y = n)) +
+  geom_bar(stat = "identity", alpha = 0.5, width = 0.5) +
+  geom_line(aes(y = `Participación - UPN`, group = CATEGORIA), color = "black", size = 0.7) +
+  geom_point(aes(y = `Participación - UPN`, group = CATEGORIA))+
+   geom_text_repel(
+    aes(
+      y =`Participación - UPN`, 
+      label = `Participación - UPN`, 
+      group = CATEGORIA
+    ), 
+    size = 3, 
+    box.padding = 0.15, 
+    nudge_x = 0.15,
+    min.segment.length = 0
+  ) +
+  
+  # Escala para las barras (porcentaje o valores absolutos)
+  scale_y_continuous(
+    name = "Número de programas",
+  )
+```
+
+### Tabla modalidades
+
+```{r echo=FALSE}
+MODALIDADES_TABLA_POSGRADO %>% 
+  select(-MODALIDAD) %>% 
+  mutate(METODOLOGIA = ifelse(METODOLOGIA == "A DISTANCIA", 
+                              "A DISTANCIA (TRADICIONAL)", METODOLOGIA)) %>%
+  mutate(METODOLOGIA = ifelse(METODOLOGIA == "A DISTANCIA (VIRTUAL)", 
+                              "VIRTUAL", METODOLOGIA)) %>%
+  filter(ANO == fecha-5 | ANO==fecha-1) %>%
+  mutate(n = ifelse(is.na(n), 0, n)) %>% 
+  mutate(across(where(is.numeric), ~replace_na(., 0))) %>% 
+  pivot_wider(names_from = c(ANO,CATEGORIA), values_from = n,names_sep = "-", values_fill = 0) %>%
+  ftable() %>% 
+  separate_header(opts = "center-hspan",
+  split = "-",
+  fixed = FALSE)
+
+  
+```
+
