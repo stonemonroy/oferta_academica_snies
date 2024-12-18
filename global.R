@@ -20,7 +20,8 @@ library(stringi)
 library(sf)
 library(flextable)
 library(forcats)
-library(arrow)
+library(shinyBS)
+
 # Fecha --------------------------------------------------------------------
 fecha = year(Sys.Date())
 

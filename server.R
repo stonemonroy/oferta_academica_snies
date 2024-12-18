@@ -79,10 +79,10 @@ texto_oferta_modalidades_html <- function(variable){
             summaryBox2(
               title = "Programas nacional",
               value = nrow(programas_nacional_filtred() %>% 
-                             distinct()),
+                             distinct(CODIGO_SNIES_DEL_PROGRAMA, .keep_all = TRUE)),
               style = "info",
               width = 12
-            ),
+            )
           )
         )
       )
@@ -96,7 +96,7 @@ texto_oferta_modalidades_html <- function(variable){
           summaryBox2(
             title = "Programas UPN",
             value = nrow(programas_upn_filtred() %>% 
-                           distinct()),
+                           distinct(CODIGO_SNIES_DEL_PROGRAMA, .keep_all = TRUE)),
             style = "success",
             width = 12
           ),
